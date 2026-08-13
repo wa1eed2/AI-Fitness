@@ -57,11 +57,11 @@
 - Progressive overload
 - Exercise selection
 - Range of motion
-- Muscle types
+- Muscle fiber types
 
 ### Body & Physiology
 
-- Skeletal muscle
+- Skeletal muscle mass
 - Skeletal mass
 - Muscle growth
 - Body recomposition
