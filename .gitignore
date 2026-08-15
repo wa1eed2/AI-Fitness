@@ -217,4 +217,10 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Local SQLite databases
+data/database/*.db
+data/database/*.db-journal
+data/database/*.db-shm
+data/database/*.db-wal
+
 .idea/
