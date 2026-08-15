@@ -104,17 +104,18 @@ def search_tfidf(query,top_n=5,min_score=0.0,topic=None,subtopic=None,min_year=N
     ranked_result = result.sort_values(by="similarity_score",ascending=False)
     return ranked_result[result_columns].head(top_n)
 
-while True:
-    query = input("Please enter a search query (or 'exit' to quit): ")
+if __name__ == "__main__":
+    while True:
+        query = input("Please enter a search query (or 'exit' to quit): ")
 
-    if query.casefold() == "exit":
-        break
-    try:
-        result = search_tfidf(query,top_n=5)
+        if query.casefold() == "exit":
+            break
+        try:
+            result = search_tfidf(query,top_n=5)
 
-        if result.empty:
-            print("No matching research papers found.")
-        else:
-            print(result)
-    except ValueError as error:
-        print(error)
+            if result.empty:
+                print("No matching research papers found.")
+            else:
+                print(result)
+        except ValueError as error:
+            print(error)
