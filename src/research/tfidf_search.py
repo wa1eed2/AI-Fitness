@@ -41,7 +41,7 @@ result_columns = [
 
 df["search_text"] = (df[text_columns].fillna("").astype(str).agg(" ".join, axis=1))
 
-vectorizer = TfidfVectorizer()
+vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
 
 tfidf_matrix = vectorizer.fit_transform(df["search_text"])
 
