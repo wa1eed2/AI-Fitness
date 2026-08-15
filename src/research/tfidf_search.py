@@ -39,11 +39,15 @@ result_columns = [
     "similarity_score"
 ]
 
-df["search_text"] = (df[text_columns].fillna("").astype(str).agg(" ".join, axis=1))
+def build_tfidf_index(data, columns):
+    indexed_data = data.copy()
 
-vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
+    indexed_data["search_text"] = indexed_data[columns].fillna("").astype(str).agg(" ".join, axis=1)
 
-tfidf_matrix = vectorizer.fit_transform(df["search_text"])
+    vectorizer_model = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
+    matrix = vectorizer_model.fit_transform(indexed_data["search_text"])
+
+    return indexed_data, vectorizer_model, matrix
 
 def validate_search_inputs(query,top_n,min_score,min_year,max_year):
     if not query.strip():
@@ -77,16 +81,16 @@ def apply_filters(result, topic=None, subtopic=None, min_year=None, max_year=Non
     return result
 
 
-def search_tfidf(query,top_n=5,min_score=0.0,topic=None,subtopic=None,min_year=None,max_year=None,study_design=None):
+def search_tfidf(data, vectorizer_model, matrix, query, top_n=5, min_score=0.0, topic=None, subtopic=None, min_year=None, max_year=None, study_design=None):
     validate_search_inputs(query,top_n,min_score,min_year,max_year)
 
-    query_vector = vectorizer.transform([query])
+    query_vector = vectorizer_model.transform([query])
 
     if query_vector.nnz == 0:
         raise ValueError("No query terms were found in the research vocabulary")
 
-    similarity_scores = cosine_similarity(query_vector,tfidf_matrix)
-    result = df.copy()
+    similarity_scores = cosine_similarity(query_vector,matrix)
+    result = data.copy()
     result["similarity_score"] = similarity_scores[0]
 
     result = apply_filters(
@@ -97,7 +101,7 @@ def search_tfidf(query,top_n=5,min_score=0.0,topic=None,subtopic=None,min_year=N
         study_design=study_design)
 
     if result.empty:
-        return result
+        return result[result_columns]
 
     result = result[result["similarity_score"] >= min_score]
 
@@ -105,13 +109,14 @@ def search_tfidf(query,top_n=5,min_score=0.0,topic=None,subtopic=None,min_year=N
     return ranked_result[result_columns].head(top_n)
 
 if __name__ == "__main__":
+    indexed_df, vectorizer, tfidf_matrix = build_tfidf_index(df, text_columns)
     while True:
         query = input("Please enter a search query (or 'exit' to quit): ")
 
         if query.casefold() == "exit":
             break
         try:
-            result = search_tfidf(query,top_n=5)
+            result = search_tfidf(indexed_df, vectorizer, tfidf_matrix, query, top_n=5)
 
             if result.empty:
                 print("No matching research papers found.")

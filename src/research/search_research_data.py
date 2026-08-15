@@ -6,6 +6,7 @@ df = pd.read_csv(csv_path)
 
 
 def search_papers(
+    data,
     topic=None,
     subtopic=None,
     keyword=None,
@@ -13,7 +14,7 @@ def search_papers(
     max_year=None,
     study_design=None
 ):
-    result = df.copy()
+    result = data.copy()
 
     if min_year is not None and max_year is not None and min_year > max_year:
         raise ValueError("min_year cannot be greater than max_year")
@@ -75,12 +76,14 @@ def search_papers(
     return result
 
 
-result = search_papers(
-    topic="training",
-    subtopic="hypertrophy",
-    keyword="volume",
-    min_year=2020,
-    max_year=2022
-)
+if __name__ == "__main__":
+    result = search_papers(
+        df,
+        topic="training",
+        subtopic="hypertrophy",
+        keyword="volume",
+        min_year=2020,
+        max_year=2022
+    )
 
-print(result)
+    print(result)

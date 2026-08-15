@@ -1,4 +1,8 @@
-from tfidf_search import search_tfidf
+from tfidf_search import search_tfidf, build_tfidf_index, df, text_columns
+
+
+indexed_df, vectorizer, tfidf_matrix = build_tfidf_index(df, text_columns)
+
 
 test_queries = [
     ("muscle hypertrophy", ["P001", "P003"]),
@@ -11,6 +15,7 @@ test_queries = [
     ("advanced methods for increasing muscle size", ["P003"])
 ]
 
+
 for top_k in [1, 2, 3]:
     correct = 0
     total_recall = 0
@@ -18,7 +23,13 @@ for top_k in [1, 2, 3]:
     total_f1 = 0
 
     for query, expected in test_queries:
-        result = search_tfidf(query, top_n=top_k)
+        result = search_tfidf(
+            indexed_df,
+            vectorizer,
+            tfidf_matrix,
+            query,
+            top_n=top_k
+        )
 
         actual_papers = result["paper_id"].tolist()
 
@@ -39,25 +50,30 @@ for top_k in [1, 2, 3]:
         else:
             f1 = 0
 
-        total_f1 += f1
-
         total_recall += recall
         total_precision += precision
+        total_f1 += f1
 
         if any(paper in actual_papers for paper in expected):
             correct += 1
-            status = "Pass"
+            status = "PASS"
         else:
-            status = "Fail"
+            status = "FAIL"
 
-        print(f"{status} | {query} | expected={expected} | " f"top_{top_k}={actual_papers} | "f"recall={recall:.2%} | precision={precision:.2%} | f1={f1:.2%}")
+        print(
+            f"{status} | {query} | expected={expected} | "
+            f"top_{top_k}={actual_papers} | "
+            f"recall={recall:.2%} | "
+            f"precision={precision:.2%} | "
+            f"f1={f1:.2%}"
+        )
 
     hit_rate = correct / len(test_queries)
-    average_recall = total_recall / len(test_queries)
-    average_precision = total_precision / len(test_queries)
-    average_f1 = total_f1 / len(test_queries)
+    mean_recall = total_recall / len(test_queries)
+    mean_precision = total_precision / len(test_queries)
+    mean_f1 = total_f1 / len(test_queries)
 
     print(f"\nHit@{top_k}: {hit_rate:.2%}")
-    print(f"Mean Recall@{top_k}: {average_recall:.2%}")
-    print(f"Mean Precision@{top_k}: {average_precision:.2%}")
-    print(f"Mean F1@{top_k}: {average_f1:.2%}\n")
+    print(f"Mean Recall@{top_k}: {mean_recall:.2%}")
+    print(f"Mean Precision@{top_k}: {mean_precision:.2%}")
+    print(f"Mean F1@{top_k}: {mean_f1:.2%}\n")
