@@ -172,3 +172,27 @@ except ValueError as error:
         raise
 else:
     raise ValueError("FAIL: Invalid exercise type was not rejected")
+
+invalid_exercise = valid_exercise.copy()
+invalid_exercise["exercise_type"] = None
+invalid_data = pd.DataFrame([invalid_exercise])
+
+try:
+    validate_exercise_data(invalid_data)
+except ValueError as error:
+    if "Invalid exercise types" in str(error):
+        print("PASS: Strength exercise without type rejected")
+    else:
+        raise
+else:
+    raise ValueError("FAIL: Strength exercise without type was not rejected")
+
+cardio_exercise = valid_exercise.copy()
+cardio_exercise["exercise_id"] = "E100"
+cardio_exercise["category"] = "Cardio"
+cardio_exercise["exercise_type"] = None
+
+cardio_data = pd.DataFrame([cardio_exercise])
+
+validate_exercise_data(cardio_data)
+print("PASS: Cardio exercise without type accepted")

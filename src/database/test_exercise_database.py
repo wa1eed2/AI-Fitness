@@ -108,3 +108,18 @@ if any(exercise["exercise_id"] == "E005" for exercise in result):
     print("PASS: Lunge search returned Reverse Lunge")
 else:
     raise ValueError("FAIL: Lunge search did not return Reverse Lunge")
+
+result = search_exercises(category="Cardio")
+
+if any(exercise["exercise_id"] == "E006" for exercise in result):
+    print("PASS: Cardio search returned Brisk Walking")
+else:
+    raise ValueError("FAIL: Cardio search did not return Brisk Walking")
+
+
+exercise = get_exercise_by_id("E006")
+
+if exercise["exercise_type"] is None:
+    print("PASS: Cardio exercise type stored as NULL")
+else:
+    raise ValueError("FAIL: Cardio exercise type should be NULL")

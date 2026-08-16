@@ -28,7 +28,6 @@ required_exercise_values = [
     "exercise_id",
     "name",
     "category",
-    "exercise_type",
     "primary_muscle",
     "difficulty_level",
     "difficulty_score",
@@ -74,7 +73,11 @@ def validate_exercise_data(data):
         "Isolation"
     ]
 
-    invalid_exercise_types = data[~data["exercise_type"].isin(valid_exercise_types)]["exercise_type"].unique().tolist()
+    strength_exercises = data["category"] == "Strength"
+
+    invalid_exercise_types = data[
+        strength_exercises & ~data["exercise_type"].isin(valid_exercise_types)
+        ]["exercise_type"].unique().tolist()
 
     if invalid_exercise_types:
         raise ValueError(f"Invalid exercise types: {invalid_exercise_types}")
@@ -121,7 +124,7 @@ def setup_exercise_database():
                     exercise_id TEXT PRIMARY KEY NOT NULL,   
                     name TEXT NOT NULL, 
                     category TEXT NOT NULL, 
-                    exercise_type TEXT NOT NULL,
+                    exercise_type TEXT,
                     primary_muscle TEXT NOT NULL, 
                     secondary_muscles TEXT, 
                     stabilizer_muscles TEXT, 
