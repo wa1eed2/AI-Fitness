@@ -54,6 +54,31 @@ def validate_exercise_data(data):
     if blank_required_values:
         raise ValueError("Blank values found in required exercise fields")
 
+    valid_categories = [
+        "Strength",
+        "Cardio",
+        "Mobility",
+        "Stretching",
+        "Balance",
+        "Plyometric",
+        "Yoga"
+    ]
+
+    invalid_categories = data[~data["category"].isin(valid_categories)]["category"].unique().tolist()
+
+    if invalid_categories:
+        raise ValueError(f"Invalid categories: {invalid_categories}")
+
+    valid_exercise_types = [
+        "Compound",
+        "Isolation"
+    ]
+
+    invalid_exercise_types = data[~data["exercise_type"].isin(valid_exercise_types)]["exercise_type"].unique().tolist()
+
+    if invalid_exercise_types:
+        raise ValueError(f"Invalid exercise types: {invalid_exercise_types}")
+
     valid_difficulty_levels = ["Beginner", "Intermediate", "Advanced"]
     invalid_difficulty_levels = data[~data["difficulty_level"].isin(valid_difficulty_levels)][
         "difficulty_level"].unique().tolist()

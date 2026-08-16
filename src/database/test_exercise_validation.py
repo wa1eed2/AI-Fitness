@@ -142,3 +142,33 @@ except ValueError as error:
         raise
 else:
     raise ValueError("FAIL: Missing exercise column was not rejected")
+
+
+invalid_exercise = valid_exercise.copy()
+invalid_exercise["category"] = "Swimming"
+invalid_data = pd.DataFrame([invalid_exercise])
+
+try:
+    validate_exercise_data(invalid_data)
+except ValueError as error:
+    if "Invalid categories" in str(error):
+        print("PASS: Invalid category rejected")
+    else:
+        raise
+else:
+    raise ValueError("FAIL: Invalid category was not rejected")
+
+
+invalid_exercise = valid_exercise.copy()
+invalid_exercise["exercise_type"] = "Hybrid"
+invalid_data = pd.DataFrame([invalid_exercise])
+
+try:
+    validate_exercise_data(invalid_data)
+except ValueError as error:
+    if "Invalid exercise types" in str(error):
+        print("PASS: Invalid exercise type rejected")
+    else:
+        raise
+else:
+    raise ValueError("FAIL: Invalid exercise type was not rejected")
