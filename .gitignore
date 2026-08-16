@@ -223,4 +223,8 @@ data/database/*.db-journal
 data/database/*.db-shm
 data/database/*.db-wal
 
+# Generated exercise ingestion files
+data/exercises/processed/*.csv
+data/exercises/review/*.csv
+
 .idea/

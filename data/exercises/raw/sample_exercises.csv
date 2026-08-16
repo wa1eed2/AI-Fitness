@@ -1,0 +1,5 @@
+name,category,target,equipment,difficulty,exercise_type,difficulty_score,movement_pattern,body_position,instructions,environment
+Push-Up,Strength,Chest,Bodyweight,Beginner,,,,,,
+Pull-Up,Strength,Back,Pull-Up Bar,Intermediate,,,,,,
+Brisk Walking,Cardio,Full Body,,Beginner,,,,,,
+Goblet Squat,Strength,Quadriceps,Dumbbell,Beginner,Compound,2,Squat,Standing,"Hold a dumbbell close to your chest, brace your trunk, bend at the hips and knees to squat under control, then push through your feet to return to standing.",Both
