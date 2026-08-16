@@ -123,3 +123,26 @@ if exercise["exercise_type"] is None:
     print("PASS: Cardio exercise type stored as NULL")
 else:
     raise ValueError("FAIL: Cardio exercise type should be NULL")
+
+result = search_exercises(movement_pattern="Hinge")
+
+if any(exercise["exercise_id"] == "E007" for exercise in result):
+    print("PASS: Hinge search returned Romanian Deadlift")
+else:
+    raise ValueError("FAIL: Hinge search did not return Romanian Deadlift")
+
+
+result = search_exercises(category="Stretching")
+
+if any(exercise["exercise_id"] == "E011" for exercise in result):
+    print("PASS: Stretching search returned Hip Flexor Stretch")
+else:
+    raise ValueError("FAIL: Stretching search did not return Hip Flexor Stretch")
+
+
+exercise = get_exercise_by_id("E011")
+
+if exercise["exercise_type"] is None:
+    print("PASS: Stretching exercise type stored as NULL")
+else:
+    raise ValueError("FAIL: Stretching exercise type should be NULL")
