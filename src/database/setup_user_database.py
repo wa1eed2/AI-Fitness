@@ -15,6 +15,40 @@ def setup_user_database():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_exercise_preferences (
+            preference_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            exercise_id TEXT NOT NULL,
+            preference TEXT NOT NULL
+                CHECK (preference IN ('Preferred', 'Disliked')),
+
+            UNIQUE (user_id, exercise_id),
+
+            FOREIGN KEY (user_id)
+                REFERENCES users(user_id)
+                ON DELETE CASCADE,
+
+            FOREIGN KEY (exercise_id)
+                REFERENCES exercises(exercise_id)
+                ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_limitations (
+            limitation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            body_area TEXT NOT NULL,
+            limitation_type TEXT NOT NULL,
+            notes TEXT,
+
+            FOREIGN KEY (user_id)
+                REFERENCES users(user_id)
+                ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_profiles (
             profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL UNIQUE,

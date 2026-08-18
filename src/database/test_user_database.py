@@ -1,5 +1,5 @@
 import sqlite3
-from src.database.query_user_database import create_user, create_user_profile,  get_user_profile, update_user_profile, delete_user
+from src.database.query_user_database import create_user, create_user_profile,  get_user_profile, update_user_profile, delete_user, add_exercise_preference, get_user_exercise_preferences, remove_exercise_preference, add_user_limitation, get_user_limitations, remove_user_limitation
 from src.database.setup_exercise_database import db_path
 
 
@@ -394,3 +394,299 @@ if deleted is False:
     print("PASS: Deleting missing user returns False")
 else:
     raise ValueError("FAIL: Missing user deletion should return False")
+
+# Test add_exercise_preference
+
+test_user_id = create_user()
+
+preference_id = add_exercise_preference(
+    test_user_id,
+    "E001",
+    "Preferred"
+)
+
+connection = sqlite3.connect(db_path)
+cursor = connection.cursor()
+
+cursor.execute("""
+    SELECT user_id, exercise_id, preference
+    FROM user_exercise_preferences
+    WHERE preference_id = ?
+""", (preference_id,))
+
+preference = cursor.fetchone()
+
+connection.close()
+
+if preference == (test_user_id, "E001", "Preferred"):
+    print("PASS: Exercise preference added successfully")
+else:
+    raise ValueError("FAIL: Exercise preference was not added correctly")
+
+delete_user(test_user_id)
+
+# Test get_user_exercise_preferences
+
+test_user_id = create_user()
+
+add_exercise_preference(
+    test_user_id,
+    "E001",
+    "Preferred"
+)
+
+add_exercise_preference(
+    test_user_id,
+    "E002",
+    "Disliked"
+)
+
+preferences = get_user_exercise_preferences(test_user_id)
+
+if (
+    len(preferences) == 2
+    and preferences[0]["user_id"] == test_user_id
+    and preferences[1]["user_id"] == test_user_id
+):
+    print("PASS: Multiple exercise preferences retrieved successfully")
+else:
+    raise ValueError("FAIL: Exercise preferences were not retrieved correctly")
+
+delete_user(test_user_id)
+
+# Test invalid exercise preference value
+
+test_user_id = create_user()
+
+try:
+    add_exercise_preference(
+        test_user_id,
+        "E001",
+        "Favorite"
+    )
+except sqlite3.IntegrityError:
+    print("PASS: Invalid exercise preference rejected")
+else:
+    raise ValueError("FAIL: Invalid exercise preference was accepted")
+
+delete_user(test_user_id)
+# Test duplicate exercise preference
+
+test_user_id = create_user()
+
+add_exercise_preference(
+    test_user_id,
+    "E001",
+    "Preferred"
+)
+
+try:
+    add_exercise_preference(
+        test_user_id,
+        "E001",
+        "Disliked"
+    )
+except sqlite3.IntegrityError:
+    print("PASS: Duplicate exercise preference rejected")
+else:
+    raise ValueError("FAIL: Duplicate exercise preference was accepted")
+
+delete_user(test_user_id)
+
+
+# Test remove_exercise_preference
+
+test_user_id = create_user()
+
+add_exercise_preference(
+    test_user_id,
+    "E001",
+    "Preferred"
+)
+
+deleted = remove_exercise_preference(
+    test_user_id,
+    "E001"
+)
+
+preferences = get_user_exercise_preferences(test_user_id)
+
+if deleted and len(preferences) == 0:
+    print("PASS: Exercise preference removed successfully")
+else:
+    raise ValueError("FAIL: Exercise preference was not removed correctly")
+
+delete_user(test_user_id)
+
+
+# Test removing missing exercise preference
+
+test_user_id = create_user()
+
+deleted = remove_exercise_preference(
+    test_user_id,
+    "E001"
+)
+
+if deleted is False:
+    print("PASS: Removing missing exercise preference returns False")
+else:
+    raise ValueError("FAIL: Missing exercise preference should return False")
+
+delete_user(test_user_id)
+
+
+# Test add_user_limitation
+
+test_user_id = create_user()
+
+limitation_id = add_user_limitation(
+    test_user_id,
+    "Knee",
+    "Pain",
+    "Pain during deep squats"
+)
+
+connection = sqlite3.connect(db_path)
+cursor = connection.cursor()
+
+cursor.execute("""
+    SELECT user_id, body_area, limitation_type, notes
+    FROM user_limitations
+    WHERE limitation_id = ?
+""", (limitation_id,))
+
+limitation = cursor.fetchone()
+
+connection.close()
+
+if limitation == (
+    test_user_id,
+    "Knee",
+    "Pain",
+    "Pain during deep squats"
+):
+    print("PASS: User limitation added successfully")
+else:
+    raise ValueError("FAIL: User limitation was not added correctly")
+
+delete_user(test_user_id)
+
+
+# Test get_user_limitations
+
+test_user_id = create_user()
+
+add_user_limitation(
+    test_user_id,
+    "Knee",
+    "Pain",
+    "Pain during deep squats"
+)
+
+add_user_limitation(
+    test_user_id,
+    "Shoulder",
+    "Limited ROM",
+    "Avoid overhead pressing"
+)
+
+limitations = get_user_limitations(test_user_id)
+
+if (
+    len(limitations) == 2
+    and limitations[0]["user_id"] == test_user_id
+    and limitations[1]["user_id"] == test_user_id
+):
+    print("PASS: Multiple user limitations retrieved successfully")
+else:
+    raise ValueError("FAIL: User limitations were not retrieved correctly")
+
+delete_user(test_user_id)
+
+
+# Test invalid body area
+
+test_user_id = create_user()
+
+try:
+    add_user_limitation(
+        test_user_id,
+        "Banana",
+        "Pain"
+    )
+except ValueError:
+    print("PASS: Invalid body area rejected")
+else:
+    raise ValueError("FAIL: Invalid body area was accepted")
+
+delete_user(test_user_id)
+
+
+# Test invalid limitation type
+
+test_user_id = create_user()
+
+try:
+    add_user_limitation(
+        test_user_id,
+        "Knee",
+        "Random Problem"
+    )
+except ValueError:
+    print("PASS: Invalid limitation type rejected")
+else:
+    raise ValueError("FAIL: Invalid limitation type was accepted")
+
+delete_user(test_user_id)
+
+
+# Test invalid notes type
+
+test_user_id = create_user()
+
+try:
+    add_user_limitation(
+        test_user_id,
+        "Knee",
+        "Pain",
+        123
+    )
+except ValueError:
+    print("PASS: Invalid limitation notes rejected")
+else:
+    raise ValueError("FAIL: Invalid limitation notes were accepted")
+
+delete_user(test_user_id)
+
+# Test remove_user_limitation
+
+test_user_id = create_user()
+
+limitation_id = add_user_limitation(
+    test_user_id,
+    "Knee",
+    "Pain",
+    "Pain during deep squats"
+)
+
+deleted = remove_user_limitation(limitation_id)
+
+limitations = get_user_limitations(test_user_id)
+
+if deleted and len(limitations) == 0:
+    print("PASS: User limitation removed successfully")
+else:
+    raise ValueError("FAIL: User limitation was not removed correctly")
+
+delete_user(test_user_id)
+
+
+# Test removing missing user limitation
+
+deleted = remove_user_limitation(999999)
+
+if deleted is False:
+    print("PASS: Removing missing user limitation returns False")
+else:
+    raise ValueError("FAIL: Missing user limitation should return False")
