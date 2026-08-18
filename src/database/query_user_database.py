@@ -2,6 +2,7 @@ import sqlite3
 from src.database.validate_user_limitation import validate_user_limitation
 from src.database.setup_exercise_database import db_path
 from src.database.validate_user_profile import validate_user_profile
+from src.database.validate_user_equipment import validate_user_equipment
 
 
 def create_user():
@@ -256,6 +257,78 @@ def remove_user_limitation(limitation_id):
         DELETE FROM user_limitations
         WHERE limitation_id = ?
     """, (limitation_id,))
+
+    deleted = cursor.rowcount > 0
+
+    connection.commit()
+    connection.close()
+
+    return deleted
+
+def add_equipment_access(user_id, equipment, access_status):
+    validate_user_equipment(equipment, access_status)
+    connection = sqlite3.connect(db_path)
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+
+        cursor.execute("""
+            INSERT INTO user_equipment_access (
+                user_id,
+                equipment,
+                access_status
+            )
+            VALUES (?, ?, ?)
+        """, (
+            user_id,
+            equipment,
+            access_status
+        ))
+
+        access_id = cursor.lastrowid
+
+        connection.commit()
+
+        return access_id
+
+    except:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def get_user_equipment_access(user_id):
+    connection = sqlite3.connect(db_path)
+    connection.row_factory = sqlite3.Row
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM user_equipment_access
+        WHERE user_id = ?
+    """, (user_id,))
+
+    equipment_access = cursor.fetchall()
+
+    connection.close()
+
+    return [dict(item) for item in equipment_access]
+
+
+def remove_equipment_access(user_id, equipment):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        DELETE FROM user_equipment_access
+        WHERE user_id = ? AND equipment = ?
+    """, (
+        user_id,
+        equipment
+    ))
 
     deleted = cursor.rowcount > 0
 

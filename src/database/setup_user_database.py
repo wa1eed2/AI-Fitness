@@ -68,6 +68,22 @@ def setup_user_database():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_equipment_access (
+            access_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            equipment TEXT NOT NULL,
+            access_status TEXT NOT NULL
+                CHECK (access_status IN ('Available', 'Unavailable')),
+
+            UNIQUE (user_id, equipment),
+
+            FOREIGN KEY (user_id)
+                REFERENCES users(user_id)
+                ON DELETE CASCADE
+        )
+    """)
+
     connection.commit()
     connection.close()
 

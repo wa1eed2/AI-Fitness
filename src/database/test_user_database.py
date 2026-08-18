@@ -1,5 +1,5 @@
 import sqlite3
-from src.database.query_user_database import create_user, create_user_profile,  get_user_profile, update_user_profile, delete_user, add_exercise_preference, get_user_exercise_preferences, remove_exercise_preference, add_user_limitation, get_user_limitations, remove_user_limitation
+from src.database.query_user_database import create_user, create_user_profile,  get_user_profile, update_user_profile, delete_user, add_exercise_preference, get_user_exercise_preferences, remove_exercise_preference, add_user_limitation, get_user_limitations, remove_user_limitation, add_equipment_access, get_user_equipment_access, remove_equipment_access
 from src.database.setup_exercise_database import db_path
 
 
@@ -690,3 +690,145 @@ if deleted is False:
     print("PASS: Removing missing user limitation returns False")
 else:
     raise ValueError("FAIL: Missing user limitation should return False")
+
+# Test add_equipment_access
+
+test_user_id = create_user()
+
+access_id = add_equipment_access(
+    test_user_id,
+    "Dumbbell",
+    "Available"
+)
+
+connection = sqlite3.connect(db_path)
+cursor = connection.cursor()
+
+cursor.execute("""
+    SELECT user_id, equipment, access_status
+    FROM user_equipment_access
+    WHERE access_id = ?
+""", (access_id,))
+
+equipment_access = cursor.fetchone()
+
+connection.close()
+
+if equipment_access == (
+    test_user_id,
+    "Dumbbell",
+    "Available"
+):
+    print("PASS: Equipment access added successfully")
+else:
+    raise ValueError("FAIL: Equipment access was not added correctly")
+
+delete_user(test_user_id)
+
+
+# Test get_user_equipment_access
+
+test_user_id = create_user()
+
+add_equipment_access(
+    test_user_id,
+    "Dumbbell",
+    "Available"
+)
+
+add_equipment_access(
+    test_user_id,
+    "Barbell",
+    "Unavailable"
+)
+
+equipment_access = get_user_equipment_access(test_user_id)
+
+if (
+    len(equipment_access) == 2
+    and equipment_access[0]["user_id"] == test_user_id
+    and equipment_access[1]["user_id"] == test_user_id
+):
+    print("PASS: Multiple equipment access entries retrieved successfully")
+else:
+    raise ValueError("FAIL: Equipment access entries were not retrieved correctly")
+
+delete_user(test_user_id)
+
+
+# Test invalid equipment
+
+test_user_id = create_user()
+
+try:
+    add_equipment_access(
+        test_user_id,
+        "Spaceship",
+        "Available"
+    )
+except ValueError:
+    print("PASS: Invalid equipment rejected")
+else:
+    raise ValueError("FAIL: Invalid equipment was accepted")
+
+delete_user(test_user_id)
+
+
+# Test invalid equipment access status
+
+test_user_id = create_user()
+
+try:
+    add_equipment_access(
+        test_user_id,
+        "Dumbbell",
+        "Maybe"
+    )
+except ValueError:
+    print("PASS: Invalid equipment access status rejected")
+else:
+    raise ValueError("FAIL: Invalid equipment access status was accepted")
+
+delete_user(test_user_id)
+
+
+# Test remove_equipment_access
+
+test_user_id = create_user()
+
+add_equipment_access(
+    test_user_id,
+    "Dumbbell",
+    "Available"
+)
+
+deleted = remove_equipment_access(
+    test_user_id,
+    "Dumbbell"
+)
+
+equipment_access = get_user_equipment_access(test_user_id)
+
+if deleted and len(equipment_access) == 0:
+    print("PASS: Equipment access removed successfully")
+else:
+    raise ValueError("FAIL: Equipment access was not removed correctly")
+
+delete_user(test_user_id)
+
+
+# Test removing missing equipment access
+
+test_user_id = create_user()
+
+deleted = remove_equipment_access(
+    test_user_id,
+    "Dumbbell"
+)
+
+if deleted is False:
+    print("PASS: Removing missing equipment access returns False")
+else:
+    raise ValueError("FAIL: Missing equipment access should return False")
+
+delete_user(test_user_id)
