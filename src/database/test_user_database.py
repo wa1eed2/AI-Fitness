@@ -1,5 +1,5 @@
 import sqlite3
-from src.database.query_user_database import create_user, create_user_profile,  get_user_profile, update_user_profile, delete_user, add_exercise_preference, get_user_exercise_preferences, remove_exercise_preference, add_user_limitation, get_user_limitations, remove_user_limitation, add_equipment_access, get_user_equipment_access, remove_equipment_access
+from src.database.query_user_database import create_user, create_user_profile,  get_user_profile, update_user_profile, delete_user, add_exercise_preference, get_user_exercise_preferences, remove_exercise_preference, add_user_limitation, get_user_limitations, remove_user_limitation, add_equipment_access, get_user_equipment_access, remove_equipment_access, create_user_nutrition_target, get_user_nutrition_target, update_user_nutrition_target, delete_user_nutrition_target
 from src.database.setup_exercise_database import db_path
 
 
@@ -830,5 +830,293 @@ if deleted is False:
     print("PASS: Removing missing equipment access returns False")
 else:
     raise ValueError("FAIL: Missing equipment access should return False")
+
+delete_user(test_user_id)
+
+# Test create_user_nutrition_target
+
+test_user_id = create_user()
+
+target = {
+    "activity_level": "Moderately Active",
+    "nutrition_goal": "Muscle Gain",
+    "bmr": 1723.75,
+    "tdee": 2671.81,
+    "calorie_target": 2938.99,
+    "protein_g": 150.0,
+    "fat_g": 81.64,
+    "carbs_g": 400.0
+}
+
+nutrition_target_id = create_user_nutrition_target(
+    test_user_id,
+    target
+)
+
+connection = sqlite3.connect(db_path)
+cursor = connection.cursor()
+
+cursor.execute("""
+    SELECT user_id, activity_level, nutrition_goal, calorie_target
+    FROM user_nutrition_targets
+    WHERE nutrition_target_id = ?
+""", (nutrition_target_id,))
+
+nutrition_target = cursor.fetchone()
+
+connection.close()
+
+if nutrition_target == (
+    test_user_id,
+    "Moderately Active",
+    "Muscle Gain",
+    2938.99
+):
+    print("PASS: User nutrition target created successfully")
+else:
+    raise ValueError("FAIL: User nutrition target was not created correctly")
+
+delete_user(test_user_id)
+
+# Test get_user_nutrition_target
+
+test_user_id = create_user()
+
+target = {
+    "activity_level": "Moderately Active",
+    "nutrition_goal": "Muscle Gain",
+    "bmr": 1723.75,
+    "tdee": 2671.81,
+    "calorie_target": 2938.99,
+    "protein_g": 150.0,
+    "fat_g": 81.64,
+    "carbs_g": 400.0
+}
+
+create_user_nutrition_target(
+    test_user_id,
+    target
+)
+
+nutrition_target = get_user_nutrition_target(test_user_id)
+
+if (
+    nutrition_target is not None
+    and nutrition_target["user_id"] == test_user_id
+    and nutrition_target["nutrition_goal"] == "Muscle Gain"
+    and nutrition_target["calorie_target"] == 2938.99
+):
+    print("PASS: User nutrition target retrieved successfully")
+else:
+    raise ValueError("FAIL: User nutrition target was not retrieved correctly")
+
+delete_user(test_user_id)
+
+
+# Test update_user_nutrition_target
+
+test_user_id = create_user()
+
+target = {
+    "activity_level": "Moderately Active",
+    "nutrition_goal": "Muscle Gain",
+    "bmr": 1723.75,
+    "tdee": 2671.81,
+    "calorie_target": 2938.99,
+    "protein_g": 150.0,
+    "fat_g": 81.64,
+    "carbs_g": 400.0
+}
+
+create_user_nutrition_target(
+    test_user_id,
+    target
+)
+
+updated = update_user_nutrition_target(
+    test_user_id,
+    {
+        "calorie_target": 2800.0,
+        "protein_g": 160.0
+    }
+)
+
+nutrition_target = get_user_nutrition_target(test_user_id)
+
+if (
+    updated
+    and nutrition_target["calorie_target"] == 2800.0
+    and nutrition_target["protein_g"] == 160.0
+    and nutrition_target["nutrition_goal"] == "Muscle Gain"
+    and nutrition_target["activity_level"] == "Moderately Active"
+):
+    print("PASS: User nutrition target partially updated successfully")
+else:
+    raise ValueError("FAIL: User nutrition target update failed")
+
+delete_user(test_user_id)
+
+
+# Test invalid nutrition activity level
+
+test_user_id = create_user()
+
+invalid_target = {
+    "activity_level": "Super Active",
+    "nutrition_goal": "Muscle Gain",
+    "bmr": 1723.75,
+    "tdee": 2671.81,
+    "calorie_target": 2938.99,
+    "protein_g": 150.0,
+    "fat_g": 81.64,
+    "carbs_g": 400.0
+}
+
+try:
+    create_user_nutrition_target(
+        test_user_id,
+        invalid_target
+    )
+except ValueError:
+    print("PASS: Invalid nutrition activity level rejected")
+else:
+    raise ValueError(
+        "FAIL: Invalid nutrition activity level was accepted"
+    )
+
+delete_user(test_user_id)
+
+
+# Test invalid nutrition numeric value
+
+test_user_id = create_user()
+
+invalid_target = {
+    "activity_level": "Moderately Active",
+    "nutrition_goal": "Muscle Gain",
+    "bmr": -100,
+    "tdee": 2671.81,
+    "calorie_target": 2938.99,
+    "protein_g": 150.0,
+    "fat_g": 81.64,
+    "carbs_g": 400.0
+}
+
+try:
+    create_user_nutrition_target(
+        test_user_id,
+        invalid_target
+    )
+except ValueError:
+    print("PASS: Invalid nutrition numeric value rejected")
+else:
+    raise ValueError(
+        "FAIL: Invalid nutrition numeric value was accepted"
+    )
+
+delete_user(test_user_id)
+
+# Test invalid partial nutrition numeric update
+
+test_user_id = create_user()
+
+target = {
+    "activity_level": "Moderately Active",
+    "nutrition_goal": "Muscle Gain",
+    "bmr": 1723.75,
+    "tdee": 2671.81,
+    "calorie_target": 2938.99,
+    "protein_g": 150.0,
+    "fat_g": 81.64,
+    "carbs_g": 400.0
+}
+
+create_user_nutrition_target(
+    test_user_id,
+    target
+)
+
+try:
+    update_user_nutrition_target(
+        test_user_id,
+        {
+            "calorie_target": -500
+        }
+    )
+except ValueError:
+    print("PASS: Invalid partial nutrition numeric update rejected")
+else:
+    raise ValueError(
+        "FAIL: Invalid partial nutrition numeric update was accepted"
+    )
+
+delete_user(test_user_id)
+
+# Test invalid partial nutrition goal update
+
+test_user_id = create_user()
+
+create_user_nutrition_target(
+    test_user_id,
+    target
+)
+
+try:
+    update_user_nutrition_target(
+        test_user_id,
+        {
+            "nutrition_goal": "Extreme Bulk"
+        }
+    )
+except ValueError:
+    print("PASS: Invalid partial nutrition goal update rejected")
+else:
+    raise ValueError(
+        "FAIL: Invalid partial nutrition goal update was accepted"
+    )
+
+delete_user(test_user_id)
+
+# Test delete_user_nutrition_target
+
+test_user_id = create_user()
+
+target = {
+    "activity_level": "Moderately Active",
+    "nutrition_goal": "Muscle Gain",
+    "bmr": 1723.75,
+    "tdee": 2671.81,
+    "calorie_target": 2938.99,
+    "protein_g": 150.0,
+    "fat_g": 81.64,
+    "carbs_g": 400.0
+}
+
+create_user_nutrition_target(
+    test_user_id,
+    target
+)
+
+deleted = delete_user_nutrition_target(test_user_id)
+
+nutrition_target = get_user_nutrition_target(test_user_id)
+
+if deleted and nutrition_target is None:
+    print("PASS: User nutrition target deleted successfully")
+else:
+    raise ValueError("FAIL: User nutrition target was not deleted correctly")
+
+delete_user(test_user_id)
+
+# Test deleting missing nutrition target
+
+test_user_id = create_user()
+
+deleted = delete_user_nutrition_target(test_user_id)
+
+if deleted is False:
+    print("PASS: Deleting missing nutrition target returns False")
+else:
+    raise ValueError("FAIL: Missing nutrition target deletion should return False")
 
 delete_user(test_user_id)

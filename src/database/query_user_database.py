@@ -3,6 +3,7 @@ from src.database.validate_user_limitation import validate_user_limitation
 from src.database.setup_exercise_database import db_path
 from src.database.validate_user_profile import validate_user_profile
 from src.database.validate_user_equipment import validate_user_equipment
+from src.database.validate_nutrition_target import validate_nutrition_target, validate_nutrition_target_update
 
 
 def create_user():
@@ -329,6 +330,137 @@ def remove_equipment_access(user_id, equipment):
         user_id,
         equipment
     ))
+
+    deleted = cursor.rowcount > 0
+
+    connection.commit()
+    connection.close()
+
+    return deleted
+
+
+def create_user_nutrition_target(user_id, target):
+    validate_nutrition_target(target)
+
+    connection = sqlite3.connect(db_path)
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+
+        cursor.execute("""
+            INSERT INTO user_nutrition_targets (
+                user_id,
+                activity_level,
+                nutrition_goal,
+                bmr,
+                tdee,
+                calorie_target,
+                protein_g,
+                fat_g,
+                carbs_g
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            user_id,
+            target.get("activity_level"),
+            target.get("nutrition_goal"),
+            target.get("bmr"),
+            target.get("tdee"),
+            target.get("calorie_target"),
+            target.get("protein_g"),
+            target.get("fat_g"),
+            target.get("carbs_g")
+        ))
+
+        nutrition_target_id = cursor.lastrowid
+
+        connection.commit()
+
+        return nutrition_target_id
+
+    except:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def get_user_nutrition_target(user_id):
+    connection = sqlite3.connect(db_path)
+    connection.row_factory = sqlite3.Row
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM user_nutrition_targets
+        WHERE user_id = ?
+    """, (user_id,))
+
+    target = cursor.fetchone()
+
+    connection.close()
+
+    if target is None:
+        return None
+
+    return dict(target)
+
+def update_user_nutrition_target(user_id, target):
+    validate_nutrition_target_update(target)
+
+    allowed_fields = [
+        "activity_level",
+        "nutrition_goal",
+        "bmr",
+        "tdee",
+        "calorie_target",
+        "protein_g",
+        "fat_g",
+        "carbs_g"
+    ]
+
+    updates = []
+    parameters = []
+
+    for field in allowed_fields:
+        if field in target:
+            updates.append(f"{field} = ?")
+            parameters.append(target[field])
+
+    if not updates:
+        return False
+
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    query = f"""
+            UPDATE user_nutrition_targets
+            SET {", ".join(updates)}
+            WHERE user_id = ?
+        """
+
+    parameters.append(user_id)
+
+    cursor.execute(query, parameters)
+
+    updated = cursor.rowcount > 0
+
+    connection.commit()
+    connection.close()
+
+    return updated
+
+
+def delete_user_nutrition_target(user_id):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        DELETE FROM user_nutrition_targets
+        WHERE user_id = ?
+    """, (user_id,))
 
     deleted = cursor.rowcount > 0
 

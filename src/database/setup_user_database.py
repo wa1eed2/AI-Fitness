@@ -84,6 +84,28 @@ def setup_user_database():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_nutrition_targets (
+            nutrition_target_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+
+            activity_level TEXT NOT NULL,
+            nutrition_goal TEXT NOT NULL,
+
+            bmr REAL NOT NULL CHECK (bmr > 0),
+            tdee REAL NOT NULL CHECK (tdee > 0),
+            calorie_target REAL NOT NULL CHECK (calorie_target > 0),
+
+            protein_g REAL NOT NULL CHECK (protein_g > 0),
+            fat_g REAL NOT NULL CHECK (fat_g > 0),
+            carbs_g REAL NOT NULL CHECK (carbs_g >= 0),
+
+            FOREIGN KEY (user_id)
+                REFERENCES users(user_id)
+                ON DELETE CASCADE
+        )
+    """)
+
     connection.commit()
     connection.close()
 
