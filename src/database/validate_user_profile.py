@@ -41,7 +41,14 @@ def validate_user_profile(profile):
         raise ValueError(f"Invalid fitness level: {fitness_level}")
 
     primary_goal = profile.get("primary_goal")
-    valid_primary_goals = ["Muscle Gain", "Fat loss", "Strength", "Endurance", "General Fitness"]
+    valid_primary_goals = [
+        "Muscle Gain",
+        "Fat Loss",
+        "Strength",
+        "Endurance",
+        "General Fitness"
+    ]
+
     if primary_goal is not None and primary_goal not in valid_primary_goals:
         raise ValueError(f"Invalid primary goal: {primary_goal}")
 

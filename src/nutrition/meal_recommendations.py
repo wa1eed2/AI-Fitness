@@ -1,5 +1,6 @@
 from src.database.query_user_database import (
-    get_safe_foods_for_user
+    get_safe_foods_for_user,
+    get_user_nutrition_target
 )
 
 
@@ -367,3 +368,41 @@ def build_meal_recommendation(
         "fat_target_met": fat_target_met
 
     }
+
+def build_meal_from_user_target(
+    user_id,
+    meal_fraction=0.25
+):
+    if (
+            isinstance(meal_fraction, bool)
+            or not isinstance(meal_fraction, (int, float))
+    ):
+        raise ValueError("Meal fraction must be a number")
+
+    if not 0 < meal_fraction <= 1:
+        raise ValueError("Meal fraction must be greater than 0 and at most 1")
+
+    nutrition_target = get_user_nutrition_target(
+        user_id
+    )
+
+    if nutrition_target is None:
+        raise ValueError(
+            "User nutrition target not found"
+        )
+
+    meal_calories = (nutrition_target["calorie_target"] * meal_fraction)
+
+    meal_protein_g = (nutrition_target["protein_g"] * meal_fraction)
+
+    meal_carbs_g = (nutrition_target["carbs_g"] * meal_fraction)
+
+    meal_fat_g = (nutrition_target["fat_g"] * meal_fraction)
+
+    return build_meal_recommendation(
+        user_id=user_id,
+        target_calories=meal_calories,
+        target_protein_g=meal_protein_g,
+        target_carbs_g=meal_carbs_g,
+        target_fat_g=meal_fat_g
+    )

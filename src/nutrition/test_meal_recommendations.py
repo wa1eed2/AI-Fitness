@@ -8,6 +8,7 @@ from src.database.setup_user_database import setup_user_database
 from src.database.query_user_database import (
     create_user,
     delete_user,
+    create_user_profile,
     create_food,
     add_food_allergen,
     add_food_allergy
@@ -16,8 +17,13 @@ from src.database.query_user_database import (
 from src.nutrition.meal_recommendations import (
     recommend_foods_for_user,
     build_meal_recommendation,
+    build_meal_from_user_target,
     calculate_macro_score,
     rank_foods_by_macros
+)
+
+from src.nutrition.nutrition_targets import (
+    generate_nutrition_target_for_user
 )
 
 
@@ -1163,6 +1169,137 @@ def test_phase_2_prefers_remaining_macro_need():
         )
 
 
+def test_build_meal_from_user_target():
+    user_id = create_user()
+
+    try:
+        profile = {
+            "age": 25,
+            "sex": "Male",
+            "height_cm": 180,
+            "weight_kg": 80,
+            "fitness_level": "Intermediate",
+            "primary_goal": "General Fitness",
+            "training_days_per_week": 4,
+            "session_duration_minutes": 60,
+            "preferred_environment": "Gym"
+        }
+
+        create_user_profile(
+            user_id,
+            profile
+        )
+
+        generate_nutrition_target_for_user(
+            user_id=user_id
+        )
+
+        foods = [
+            {
+                "food_id": 1,
+                "name": "Protein Food",
+                "protein_g": 30,
+                "carbs_g": 10,
+                "fat_g": 5,
+                "calories": 220
+            },
+            {
+                "food_id": 2,
+                "name": "Carb Food",
+                "protein_g": 8,
+                "carbs_g": 45,
+                "fat_g": 4,
+                "calories": 250
+            }
+        ]
+
+        with patch(
+            "src.nutrition.meal_recommendations.recommend_foods_for_user",
+            return_value=foods
+        ):
+            result = build_meal_from_user_target(
+                user_id=user_id,
+                meal_fraction=0.25
+            )
+
+        if not result["foods"]:
+            raise ValueError("FAIL: Meal was not generated from saved nutrition target")
+
+        if result["total_calories"] <= 0:
+            raise ValueError("FAIL: Generated meal has invalid calories")
+
+        print("PASS: Meal generated automatically from saved nutrition target")
+
+    finally:
+        delete_user(user_id)
+
+def test_invalid_meal_fraction():
+    user_id = create_user()
+
+    try:
+        profile = {
+            "age": 25,
+            "sex": "Male",
+            "height_cm": 180,
+            "weight_kg": 80,
+            "fitness_level": "Intermediate",
+            "primary_goal": "General Fitness",
+            "training_days_per_week": 4,
+            "session_duration_minutes": 60,
+            "preferred_environment": "Gym"
+        }
+
+        create_user_profile(
+            user_id,
+            profile
+        )
+
+        generate_nutrition_target_for_user(user_id=user_id)
+
+        invalid_values = [
+            0,
+            -0.25,
+            1.5,
+            "0.25",
+            True
+        ]
+
+        for value in invalid_values:
+            try:
+                build_meal_from_user_target(
+                    user_id=user_id,
+                    meal_fraction=value
+                )
+
+            except ValueError:
+                continue
+
+            raise ValueError(f"FAIL: Invalid meal fraction accepted: {value}")
+
+        print("PASS: Invalid meal fractions rejected")
+
+    finally:
+        delete_user(user_id)
+
+def test_build_meal_without_nutrition_target():
+    user_id = create_user()
+
+    try:
+        try:
+            build_meal_from_user_target(
+                user_id=user_id,
+                meal_fraction=0.25
+            )
+
+        except ValueError:
+            print("PASS: Missing nutrition target rejected")
+
+        else:
+            raise ValueError("FAIL: Meal generated without nutrition target")
+
+    finally:
+        delete_user(user_id)
+
 # ============================================================
 # RUN TESTS
 # ============================================================
@@ -1186,6 +1323,9 @@ def run_tests():
     test_invalid_macro_weights()
     test_dynamic_macro_reranking()
     test_phase_2_prefers_remaining_macro_need()
+    test_build_meal_from_user_target()
+    test_invalid_meal_fraction()
+    test_build_meal_without_nutrition_target()
 
     print(
         "\nPASS: All meal recommendation tests completed"
