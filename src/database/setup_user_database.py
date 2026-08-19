@@ -106,6 +106,90 @@ def setup_user_database():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_food_allergies (
+            allergy_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            allergen TEXT NOT NULL,
+            notes TEXT,
+
+            UNIQUE (user_id, allergen),
+
+            FOREIGN KEY (user_id)
+                REFERENCES users(user_id)
+                ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS foods (
+            food_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            serving_size_g REAL NOT NULL CHECK (serving_size_g > 0),
+            calories REAL NOT NULL CHECK (calories >= 0),
+            protein_g REAL NOT NULL CHECK (protein_g >= 0),
+            carbs_g REAL NOT NULL CHECK (carbs_g >= 0),
+            fat_g REAL NOT NULL CHECK (fat_g >= 0)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS food_allergens (
+            food_allergen_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            food_id INTEGER NOT NULL,
+            allergen TEXT NOT NULL,
+
+            UNIQUE (food_id, allergen),
+
+            FOREIGN KEY (food_id)
+                REFERENCES foods(food_id)
+                ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS meals (
+            meal_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            meal_type TEXT NOT NULL
+                CHECK (
+                    meal_type IN (
+                        'Breakfast',
+                        'Lunch',
+                        'Dinner',
+                        'Snack'
+                    )
+                ),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (user_id)
+                REFERENCES users(user_id)
+                ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS meal_foods (
+            meal_food_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            meal_id INTEGER NOT NULL,
+            food_id INTEGER NOT NULL,
+            servings REAL NOT NULL CHECK (servings > 0),
+    
+            FOREIGN KEY (meal_id)
+                REFERENCES meals(meal_id)
+                ON DELETE CASCADE,
+    
+            FOREIGN KEY (food_id)
+                REFERENCES foods(food_id)
+                ON DELETE CASCADE,
+    
+            UNIQUE (meal_id, food_id)
+        )
+    """)
+
+
+
     connection.commit()
     connection.close()
 
