@@ -63,6 +63,33 @@ from src.rag.conversation_service import (
     generate_conversation_research_answer
 )
 
+from src.rag.question_classifier import (
+    classify_question
+)
+
+from src.rag.verified_route_data import (
+    build_verified_route_data,
+    get_verified_route_data_summary,
+    serialize_verified_route_data
+)
+
+from src.rag.context_coaching_service import (
+    generate_context_coaching_answer
+)
+
+from src.rag.meal_tool_service import (
+    generate_meal_conversation_answer
+)
+
+from src.rag.workout_tool_service import (
+    build_verified_workout_package,
+    generate_workout_conversation_answer
+)
+
+from src.rag.conversation_router import (
+    route_conversation_message
+)
+
 from src.rag.groq_provider import (
     GroqProvider
 )
