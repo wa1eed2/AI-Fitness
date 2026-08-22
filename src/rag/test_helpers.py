@@ -2,14 +2,21 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from src.api.app import create_app
-from src.database.query_user_database import delete_user
+from src.api.app import (
+    create_app
+)
+
+from src.database.query_user_database import (
+    delete_user
+)
 
 
 TEST_PASSWORD = "StrongPassword123"
 
 
-def create_test_client(llm_provider=None):
+def create_test_client(
+    llm_provider=None
+):
     return TestClient(
         create_app(
             llm_provider=llm_provider
@@ -17,7 +24,9 @@ def create_test_client(llm_provider=None):
     )
 
 
-def unique_email(prefix="test"):
+def unique_email(
+    prefix="test"
+):
     return f"{prefix}-{uuid4().hex}@example.com"
 
 
@@ -26,7 +35,9 @@ def register_account(
     prefix="test",
     password=TEST_PASSWORD
 ):
-    email = unique_email(prefix)
+    email = unique_email(
+        prefix
+    )
 
     response = client.post(
         "/api/v1/auth/register",
@@ -42,14 +53,20 @@ def register_account(
     return response.json()
 
 
-def auth_headers(account):
+def auth_headers(
+    account
+):
     return {
         "Authorization": f"Bearer {account['access_token']}"
     }
 
 
-def safe_delete_user(user_id):
+def safe_delete_user(
+    user_id
+):
     try:
-        delete_user(user_id)
+        delete_user(
+            user_id
+        )
     except Exception:
         pass

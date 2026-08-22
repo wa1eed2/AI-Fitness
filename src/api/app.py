@@ -4,7 +4,9 @@ from fastapi import (
     Request
 )
 
-from fastapi.responses import JSONResponse
+from fastapi.responses import (
+    JSONResponse
+)
 
 from src.api.dependencies import (
     require_current_user
@@ -42,6 +44,10 @@ from src.api.routes.analytics import (
     router as analytics_router
 )
 
+from src.api.routes.ai import (
+    router as ai_router
+)
+
 from src.database.setup_auth_database import (
     setup_auth_database
 )
@@ -52,7 +58,9 @@ APP_VERSION = "0.1.0"
 API_VERSION = "v1"
 
 
-def create_app():
+def create_app(
+    llm_provider=None
+):
     setup_auth_database()
 
     app = FastAPI(
@@ -61,7 +69,11 @@ def create_app():
         description="Backend API for the AI-Fitness platform"
     )
 
-    @app.exception_handler(ValueError)
+    app.state.llm_provider = llm_provider
+
+    @app.exception_handler(
+        ValueError
+    )
     async def value_error_handler(
         request: Request,
         exception: ValueError
@@ -69,7 +81,9 @@ def create_app():
         return JSONResponse(
             status_code=400,
             content={
-                "detail": str(exception)
+                "detail": str(
+                    exception
+                )
             }
         )
 
@@ -148,6 +162,10 @@ def create_app():
                 require_current_user
             )
         ]
+    )
+
+    app.include_router(
+        ai_router
     )
 
     return app
