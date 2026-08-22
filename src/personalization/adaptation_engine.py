@@ -4,6 +4,10 @@ from src.analytics.progression_analytics import (
     get_progression_analytics_overview
 )
 
+from src.analytics.recovery_analytics import (
+    get_recovery_intensity_analytics
+)
+
 from src.analytics.training_analytics import (
     get_training_analytics_overview
 )
@@ -21,7 +25,9 @@ ACTION_REDUCE_VOLUME = "reduce_volume"
 
 MIN_COMPLETED_WORKOUTS = 3
 MIN_LOG_COVERAGE_PERCENTAGE = 50.0
+
 RECENT_WINDOW_DAYS = 14
+
 MIN_RECENT_COMPLETION_RATIO_FOR_PROGRESSION = 0.75
 MIN_POSITIVE_PROGRESSION_RATIO = 0.50
 MIN_EXERCISE_WORKOUTS_FOR_PROGRESSION = 2
@@ -92,7 +98,10 @@ def normalize_started_at(value):
     return None
 
 
-def get_required_dictionary(container, key):
+def get_required_dictionary(
+    container,
+    key
+):
     if not isinstance(container, dict):
         raise ValueError("Analytics result must be a dictionary")
 
@@ -106,7 +115,10 @@ def get_required_dictionary(container, key):
     return value
 
 
-def get_required_list(container, key):
+def get_required_list(
+    container,
+    key
+):
     if not isinstance(container, dict):
         raise ValueError("Analytics result must be a dictionary")
 
@@ -236,8 +248,14 @@ def classify_exercise_progression(exercise):
             weight_change,
             volume_change
         )
-        if isinstance(value, (int, float))
-        and not isinstance(value, bool)
+        if isinstance(
+            value,
+            (int, float)
+        )
+        and not isinstance(
+            value,
+            bool
+        )
     ]
 
     if any(
@@ -320,9 +338,32 @@ def summarize_progression(exercise_progression):
     return summary
 
 
-def build_recommendation(
-    action
-):
+def validate_recovery_summary(recovery):
+    if not isinstance(recovery, dict):
+        raise ValueError("Recovery analytics must be a dictionary")
+
+    signal_status = recovery.get(
+        "signal_status"
+    )
+
+    if signal_status not in {
+        "insufficient_data",
+        "normal",
+        "high_exertion"
+    }:
+        raise ValueError("Recovery analytics contains invalid signal_status")
+
+    high_exertion_signal = recovery.get(
+        "high_exertion_signal"
+    )
+
+    if not isinstance(high_exertion_signal, bool):
+        raise ValueError("Recovery analytics requires boolean high_exertion_signal")
+
+    return recovery
+
+
+def build_recommendation(action):
     if action == ACTION_PROGRESS_CAUTIOUSLY:
         return {
             "change_type": "training_progression",
@@ -330,21 +371,22 @@ def build_recommendation(
             "automatic_application": False,
             "requires_user_confirmation": True,
             "message": (
-                "The available training data supports considering a cautious progression. "
-                "The system should propose a specific change separately and must not apply "
-                "it without user confirmation."
+                "The available training, progression, and exertion data support "
+                "considering a cautious progression. A specific bounded change "
+                "must be proposed separately and cannot be applied automatically."
             )
         }
 
     if action == ACTION_REDUCE_VOLUME:
         return {
             "change_type": "training_reduction",
-            "change_scope": "not yet enabled",
+            "change_scope": "temporary training-volume reduction",
             "automatic_application": False,
             "requires_user_confirmation": True,
             "message": (
-                "Training reduction requires recovery or exertion signals that are not "
-                "evaluated by this stage."
+                "Recent recorded exertion is high and exercise progression also "
+                "contains decline. A temporary reduction in training volume may be "
+                "appropriate to propose, but no training change has been applied."
             )
         }
 
@@ -354,7 +396,10 @@ def build_recommendation(
             "change_scope": None,
             "automatic_application": False,
             "requires_user_confirmation": False,
-            "message": "Maintain the current training approach until stronger adaptation evidence is available."
+            "message": (
+                "Maintain the current training approach until the deterministic "
+                "adaptation criteria support a bounded change."
+            )
         }
 
     return {
@@ -362,7 +407,9 @@ def build_recommendation(
         "change_scope": None,
         "automatic_application": False,
         "requires_user_confirmation": False,
-        "message": "More reliable training data is required before proposing an adaptation."
+        "message": (
+            "More reliable training data is required before proposing an adaptation."
+        )
     }
 
 
@@ -371,7 +418,8 @@ def determine_adaptation_action(
     completed_workout_count,
     log_coverage_percentage,
     recent_completion_ratio,
-    progression_summary
+    progression_summary,
+    recovery_summary
 ):
     reason_codes = []
 
@@ -431,6 +479,39 @@ def determine_adaptation_action(
             ]
         )
 
+    recovery_status = recovery_summary[
+        "signal_status"
+    ]
+
+    if recovery_status == "high_exertion":
+        if progression_summary[
+            "negative_progression_count"
+        ] > 0:
+            return (
+                ACTION_REDUCE_VOLUME,
+                [
+                    "HIGH_RECENT_EXERTION_SIGNAL",
+                    "NEGATIVE_EXERCISE_PROGRESSION",
+                    "USER_CONFIRMATION_REQUIRED"
+                ]
+            )
+
+        return (
+            ACTION_MAINTAIN,
+            [
+                "HIGH_RECENT_EXERTION_SIGNAL",
+                "NO_DECLINING_PROGRESSION_CONFIRMATION"
+            ]
+        )
+
+    if recovery_status == "insufficient_data":
+        return (
+            ACTION_MAINTAIN,
+            [
+                "RECOVERY_DATA_INSUFFICIENT_FOR_PROGRESSION"
+            ]
+        )
+
     positive_ratio = progression_summary[
         "positive_progression_ratio"
     ]
@@ -446,7 +527,8 @@ def determine_adaptation_action(
             ACTION_PROGRESS_CAUTIOUSLY,
             [
                 "SUFFICIENT_RECENT_TRAINING",
-                "POSITIVE_EXERCISE_PROGRESSION"
+                "POSITIVE_EXERCISE_PROGRESSION",
+                "NO_HIGH_EXERTION_SIGNAL"
             ]
         )
 
@@ -456,8 +538,7 @@ def determine_adaptation_action(
         return (
             ACTION_MAINTAIN,
             [
-                "MIXED_OR_NEGATIVE_PROGRESSION",
-                "RECOVERY_SIGNAL_REQUIRED_BEFORE_REDUCTION"
+                "NEGATIVE_PROGRESSION_WITHOUT_HIGH_EXERTION_CONFIRMATION"
             ]
         )
 
@@ -474,7 +555,8 @@ def evaluate_training_adaptation(
     reference_date=None,
     profile_loader=None,
     training_loader=None,
-    progression_loader=None
+    progression_loader=None,
+    recovery_loader=None
 ):
     validate_user_id(
         user_id
@@ -493,6 +575,9 @@ def evaluate_training_adaptation(
     if progression_loader is None:
         progression_loader = get_progression_analytics_overview
 
+    if recovery_loader is None:
+        recovery_loader = get_recovery_intensity_analytics
+
     if not callable(profile_loader):
         raise ValueError("profile_loader must be callable")
 
@@ -501,6 +586,9 @@ def evaluate_training_adaptation(
 
     if not callable(progression_loader):
         raise ValueError("progression_loader must be callable")
+
+    if not callable(recovery_loader):
+        raise ValueError("recovery_loader must be callable")
 
     profile = profile_loader(
         user_id
@@ -534,6 +622,21 @@ def evaluate_training_adaptation(
 
     progression = progression_loader(
         user_id
+    )
+
+    try:
+        recovery = recovery_loader(
+            user_id,
+            reference_date=normalized_reference_date
+        )
+
+    except TypeError:
+        recovery = recovery_loader(
+            user_id
+        )
+
+    recovery = validate_recovery_summary(
+        recovery
     )
 
     volume = get_required_dictionary(
@@ -593,7 +696,8 @@ def evaluate_training_adaptation(
         completed_workout_count=completed_workout_count,
         log_coverage_percentage=coverage,
         recent_completion_ratio=recent_completion_ratio,
-        progression_summary=progression_summary
+        progression_summary=progression_summary,
+        recovery_summary=recovery
     )
 
     return {
@@ -612,7 +716,8 @@ def evaluate_training_adaptation(
             "recent_completed_workouts": recent_completed_workouts,
             "expected_recent_sessions": expected_recent_sessions,
             "recent_completion_ratio": recent_completion_ratio,
-            "progression": progression_summary
+            "progression": progression_summary,
+            "recovery": recovery
         },
         "recommendation": build_recommendation(
             action

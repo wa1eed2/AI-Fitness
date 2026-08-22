@@ -64,6 +64,73 @@ def setup_adaptation_database():
             """
         )
 
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS adaptation_applications (
+                application_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                proposal_id INTEGER NOT NULL UNIQUE,
+                user_id INTEGER NOT NULL,
+                action TEXT NOT NULL CHECK (
+                    action IN (
+                        'progress_cautiously',
+                        'reduce_volume'
+                    )
+                ),
+                field_name TEXT NOT NULL CHECK (
+                    field_name = 'session_duration_minutes'
+                ),
+                before_value REAL NOT NULL,
+                after_value REAL NOT NULL,
+                change_amount REAL NOT NULL,
+                change_percent REAL NOT NULL,
+                policy_version TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'applied' CHECK (
+                    status IN (
+                        'applied',
+                        'rolled_back'
+                    )
+                ),
+                applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                rolled_back_at TEXT,
+                FOREIGN KEY (
+                    proposal_id
+                )
+                REFERENCES adaptation_proposals (
+                    proposal_id
+                )
+                ON DELETE CASCADE,
+                FOREIGN KEY (
+                    user_id
+                )
+                REFERENCES users (
+                    user_id
+                )
+                ON DELETE CASCADE
+            )
+            """
+        )
+
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_adaptation_applications_user_applied
+            ON adaptation_applications (
+                user_id,
+                applied_at DESC,
+                application_id DESC
+            )
+            """
+        )
+
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_adaptation_applications_user_status
+            ON adaptation_applications (
+                user_id,
+                status
+            )
+            """
+        )
+
         connection.commit()
 
     finally:
@@ -72,4 +139,4 @@ def setup_adaptation_database():
 
 if __name__ == "__main__":
     setup_adaptation_database()
-    print("Adaptation proposal database setup complete")
+    print("Adaptation database setup complete")
