@@ -4,6 +4,7 @@ import re
 ROUTE_RESEARCH = "research"
 ROUTE_NUTRITION = "nutrition"
 ROUTE_WORKOUT = "workout"
+ROUTE_ADAPTATION = "adaptation"
 ROUTE_PERSONAL_DATA = "personal_data"
 ROUTE_COACHING = "coaching"
 ROUTE_SAFETY = "safety"
@@ -98,6 +99,41 @@ WORKOUT_GENERATION_PHRASES = {
 }
 
 
+ADAPTATION_PHRASES = {
+    "should i increase my training",
+    "increase my training",
+    "should i increase my workout",
+    "increase my workout",
+    "increase my session duration",
+    "should i increase my session duration",
+    "should i train more",
+    "am i ready to progress",
+    "ready to progress",
+    "should i progress",
+    "progress my training",
+    "should i reduce my training",
+    "reduce my training",
+    "decrease my training",
+    "reduce my training volume",
+    "reduce my volume",
+    "decrease my volume",
+    "should i train less",
+    "should i deload",
+    "do i need a deload",
+    "need a deload",
+    "adapt my training",
+    "adjust my training",
+    "training adaptation",
+    "how is my recovery",
+    "how's my recovery",
+    "how am i recovering",
+    "am i recovering well",
+    "my recovery looking",
+    "recovery looking",
+    "recovery status"
+}
+
+
 NUTRITION_TERMS = {
     "nutrition",
     "calorie",
@@ -169,7 +205,9 @@ def normalize_question(question):
     if not isinstance(question, str):
         raise ValueError("Question must be a string")
 
-    normalized = " ".join(question.strip().split())
+    normalized = " ".join(
+        question.strip().split()
+    )
 
     if not normalized:
         raise ValueError("Question cannot be empty")
@@ -177,7 +215,10 @@ def normalize_question(question):
     return normalized
 
 
-def contains_phrase(text, phrases):
+def contains_phrase(
+    text,
+    phrases
+):
     lowered = text.casefold()
 
     return [
@@ -188,11 +229,16 @@ def contains_phrase(text, phrases):
 
 
 def tokenize(text):
-    return re.findall(r"[a-zA-Z]+", text.casefold())
+    return re.findall(
+        r"[a-zA-Z]+",
+        text.casefold()
+    )
 
 
 def is_probable_gibberish(question):
-    tokens = tokenize(question)
+    tokens = tokenize(
+        question
+    )
 
     if not tokens:
         return True
@@ -200,7 +246,9 @@ def is_probable_gibberish(question):
     if len(tokens) != 1:
         return False
 
-    token = tokens[0]
+    token = tokens[
+        0
+    ]
 
     if len(token) < 12:
         return False
@@ -211,15 +259,22 @@ def is_probable_gibberish(question):
         if character in "aeiou"
     )
 
-    vowel_ratio = vowels / len(token)
+    vowel_ratio = (
+        vowels
+        / len(token)
+    )
 
     return vowel_ratio < 0.15
 
 
 def classify_question(question):
-    normalized = normalize_question(question)
+    normalized = normalize_question(
+        question
+    )
 
-    if is_probable_gibberish(normalized):
+    if is_probable_gibberish(
+        normalized
+    ):
         return {
             "route": ROUTE_UNKNOWN,
             "safety_level": SAFETY_LEVEL_NONE,
@@ -236,7 +291,9 @@ def classify_question(question):
         return {
             "route": ROUTE_SAFETY,
             "safety_level": SAFETY_LEVEL_URGENT,
-            "matched_signals": sorted(urgent_matches),
+            "matched_signals": sorted(
+                urgent_matches
+            ),
             "reason": "The message contains a potentially urgent safety signal."
         }
 
@@ -249,7 +306,9 @@ def classify_question(question):
         return {
             "route": ROUTE_SAFETY,
             "safety_level": SAFETY_LEVEL_CAUTION,
-            "matched_signals": sorted(caution_matches),
+            "matched_signals": sorted(
+                caution_matches
+            ),
             "reason": "The message contains a pain, injury, or health-safety signal."
         }
 
@@ -262,7 +321,9 @@ def classify_question(question):
         return {
             "route": ROUTE_RESEARCH,
             "safety_level": SAFETY_LEVEL_NONE,
-            "matched_signals": sorted(research_matches),
+            "matched_signals": sorted(
+                research_matches
+            ),
             "reason": "The user explicitly requested research or scientific evidence."
         }
 
@@ -275,8 +336,28 @@ def classify_question(question):
         return {
             "route": ROUTE_WORKOUT,
             "safety_level": SAFETY_LEVEL_NONE,
-            "matched_signals": sorted(workout_matches),
+            "matched_signals": sorted(
+                workout_matches
+            ),
             "reason": "The user explicitly requested deterministic workout generation."
+        }
+
+    adaptation_matches = contains_phrase(
+        normalized,
+        ADAPTATION_PHRASES
+    )
+
+    if adaptation_matches:
+        return {
+            "route": ROUTE_ADAPTATION,
+            "safety_level": SAFETY_LEVEL_NONE,
+            "matched_signals": sorted(
+                adaptation_matches
+            ),
+            "reason": (
+                "The user asked whether their recorded training data supports "
+                "progression, reduction, recovery review, or another adaptation."
+            )
         }
 
     nutrition_matches = contains_phrase(
@@ -288,7 +369,9 @@ def classify_question(question):
         return {
             "route": ROUTE_NUTRITION,
             "safety_level": SAFETY_LEVEL_NONE,
-            "matched_signals": sorted(nutrition_matches),
+            "matched_signals": sorted(
+                nutrition_matches
+            ),
             "reason": "The message is primarily about nutrition or stored nutrition targets."
         }
 
@@ -301,8 +384,13 @@ def classify_question(question):
         return {
             "route": ROUTE_COACHING,
             "safety_level": SAFETY_LEVEL_NONE,
-            "matched_signals": sorted(coaching_matches),
-            "reason": "The message contains explicit coaching, motivational, habit, or adherence intent."
+            "matched_signals": sorted(
+                coaching_matches
+            ),
+            "reason": (
+                "The message contains explicit coaching, motivational, habit, "
+                "or adherence intent."
+            )
         }
 
     personal_matches = contains_phrase(
@@ -314,7 +402,9 @@ def classify_question(question):
         return {
             "route": ROUTE_PERSONAL_DATA,
             "safety_level": SAFETY_LEVEL_NONE,
-            "matched_signals": sorted(personal_matches),
+            "matched_signals": sorted(
+                personal_matches
+            ),
             "reason": "The message asks about the user's own stored fitness data."
         }
 
@@ -322,5 +412,8 @@ def classify_question(question):
         "route": ROUTE_COACHING,
         "safety_level": SAFETY_LEVEL_NONE,
         "matched_signals": [],
-        "reason": "No research, nutrition, workout-generation, personal-data, or safety signal was detected."
+        "reason": (
+            "No research, adaptation, nutrition, workout-generation, "
+            "personal-data, or safety signal was detected."
+        )
     }

@@ -3,6 +3,10 @@ from src.database.query_ai_conversation_database import (
     get_ai_conversation
 )
 
+from src.rag.adaptation_tool_service import (
+    generate_adaptation_conversation_answer
+)
+
 from src.rag.context_coaching_service import (
     generate_context_coaching_answer
 )
@@ -23,6 +27,7 @@ from src.rag.nutrition_action_classifier import (
 )
 
 from src.rag.question_classifier import (
+    ROUTE_ADAPTATION,
     ROUTE_NUTRITION,
     ROUTE_RESEARCH,
     ROUTE_SAFETY,
@@ -111,7 +116,9 @@ def route_conversation_message(
         normalized_question
     )
 
-    route = classification["route"]
+    route = classification[
+        "route"
+    ]
 
     if route == ROUTE_SAFETY:
         answer = build_safety_response(
@@ -135,8 +142,12 @@ def route_conversation_message(
             "answer": answer,
             "citations": [],
             "citation_repair_used": False,
-            "user_message": exchange["user_message"],
-            "assistant_message": exchange["assistant_message"]
+            "user_message": exchange[
+                "user_message"
+            ],
+            "assistant_message": exchange[
+                "assistant_message"
+            ]
         }
 
     if route == ROUTE_UNKNOWN:
@@ -157,8 +168,12 @@ def route_conversation_message(
             "answer": UNKNOWN_MESSAGE,
             "citations": [],
             "citation_repair_used": False,
-            "user_message": exchange["user_message"],
-            "assistant_message": exchange["assistant_message"]
+            "user_message": exchange[
+                "user_message"
+            ],
+            "assistant_message": exchange[
+                "assistant_message"
+            ]
         }
 
     if route == ROUTE_RESEARCH:
@@ -182,8 +197,13 @@ def route_conversation_message(
             study_design=study_design
         )
 
-        result["route"] = route
-        result["routing"] = classification
+        result[
+            "route"
+        ] = route
+
+        result[
+            "routing"
+        ] = classification
 
         return result
 
@@ -196,13 +216,34 @@ def route_conversation_message(
             user_id=user_id,
             conversation_id=conversation_id,
             question=normalized_question,
-            workout_action=workout_action["action"],
+            workout_action=workout_action[
+                "action"
+            ],
             provider=provider,
             exercise_count=exercise_count
         )
 
-        result["routing"] = classification
-        result["workout_routing"] = workout_action
+        result[
+            "routing"
+        ] = classification
+
+        result[
+            "workout_routing"
+        ] = workout_action
+
+        return result
+
+    if route == ROUTE_ADAPTATION:
+        result = generate_adaptation_conversation_answer(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            question=normalized_question,
+            provider=provider
+        )
+
+        result[
+            "routing"
+        ] = classification
 
         return result
 
@@ -211,7 +252,9 @@ def route_conversation_message(
             normalized_question
         )
 
-        if nutrition_action["action"] == ACTION_MEAL_GENERATION:
+        if nutrition_action[
+            "action"
+        ] == ACTION_MEAL_GENERATION:
             result = generate_meal_conversation_answer(
                 user_id=user_id,
                 conversation_id=conversation_id,
@@ -220,8 +263,13 @@ def route_conversation_message(
                 meal_fraction=meal_fraction
             )
 
-            result["routing"] = classification
-            result["nutrition_action"] = nutrition_action
+            result[
+                "routing"
+            ] = classification
+
+            result[
+                "nutrition_action"
+            ] = nutrition_action
 
             return result
 
@@ -237,8 +285,13 @@ def route_conversation_message(
             max_personal_context_chars=max_personal_context_chars
         )
 
-        result["routing"] = classification
-        result["nutrition_action"] = nutrition_action
+        result[
+            "routing"
+        ] = classification
+
+        result[
+            "nutrition_action"
+        ] = nutrition_action
 
         return result
 
@@ -254,6 +307,8 @@ def route_conversation_message(
         max_personal_context_chars=max_personal_context_chars
     )
 
-    result["routing"] = classification
+    result[
+        "routing"
+    ] = classification
 
     return result
