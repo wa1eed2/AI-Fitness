@@ -18,6 +18,14 @@ from src.vision.pose_geometry import (
     validate_landmark
 )
 
+from src.vision.real_world_validation import (
+    build_validation_expectation,
+    calculate_pose_detection_ratio,
+    evaluate_real_world_analysis,
+    run_real_world_validation_case,
+    run_real_world_validation_suite
+)
+
 from src.vision.squat_analysis import (
     ANALYSIS_STATUS_ANALYZABLE,
     ANALYSIS_STATUS_INSUFFICIENT_LANDMARKS,
