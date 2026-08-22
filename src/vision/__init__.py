@@ -35,3 +35,12 @@ from src.vision.squat_repetition_analysis import (
     analyze_squat_angle_sequence,
     analyze_squat_pose_sequence
 )
+
+from src.vision.video_squat_pipeline import (
+    VIDEO_SOURCE,
+    VideoBackendUnavailableError,
+    VideoDecodeError,
+    VideoMetadataError,
+    VideoOpenError,
+    analyze_squat_video
+)
