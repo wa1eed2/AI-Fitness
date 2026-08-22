@@ -48,8 +48,16 @@ from src.api.routes.ai import (
     router as ai_router
 )
 
+from src.api.routes.ai_conversations import (
+    router as ai_conversations_router
+)
+
 from src.database.setup_auth_database import (
     setup_auth_database
+)
+
+from src.database.setup_ai_conversation_database import (
+    setup_ai_conversation_database
 )
 
 
@@ -62,6 +70,7 @@ def create_app(
     llm_provider=None
 ):
     setup_auth_database()
+    setup_ai_conversation_database()
 
     app = FastAPI(
         title=APP_TITLE,
@@ -166,6 +175,10 @@ def create_app(
 
     app.include_router(
         ai_router
+    )
+
+    app.include_router(
+        ai_conversations_router
     )
 
     return app

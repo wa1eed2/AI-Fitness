@@ -4,7 +4,9 @@ from src.rag.research_retriever import (
     retrieve_research
 )
 
-from src.rag.context_builder import build_research_context
+from src.rag.context_builder import (
+    build_research_context
+)
 
 from src.rag.citation_builder import (
     build_citation,
@@ -28,9 +30,13 @@ from src.rag.citation_validator import (
     validate_answer_citations
 )
 
-from src.rag.answer_generator import generate_research_answer
+from src.rag.answer_generator import (
+    generate_research_answer
+)
 
-from src.rag.fake_llm_provider import FakeLLMProvider
+from src.rag.fake_llm_provider import (
+    FakeLLMProvider
+)
 
 from src.rag.user_context import (
     build_user_context,
@@ -47,6 +53,20 @@ from src.rag.personalized_answer_generator import (
     generate_personalized_research_answer
 )
 
-from src.rag.groq_provider import GroqProvider
+from src.rag.conversation_prompt_builder import (
+    build_conversation_generation_prompts,
+    build_conversation_history
+)
 
-from src.rag.openai_provider import OpenAIProvider
+from src.rag.conversation_service import (
+    ConversationNotFoundError,
+    generate_conversation_research_answer
+)
+
+from src.rag.groq_provider import (
+    GroqProvider
+)
+
+from src.rag.openai_provider import (
+    OpenAIProvider
+)
