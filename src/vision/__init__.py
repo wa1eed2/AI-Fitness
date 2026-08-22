@@ -61,5 +61,6 @@ from src.vision.video_squat_pipeline import (
     VideoDecodeError,
     VideoMetadataError,
     VideoOpenError,
-    analyze_squat_video
+    analyze_squat_video,
+    build_view_suitability_summary
 )

@@ -18,6 +18,15 @@ from src.vision.squat_analysis import (
     analyze_squat_frame
 )
 
+from src.vision.squat_movement_metrics import (
+    VIEW_BILATERAL_OBSERVABLE,
+    VIEW_INSUFFICIENT,
+    VIEW_SINGLE_SIDE_OBSERVABLE,
+    analyze_bilateral_squat_frame,
+    enrich_repetitions_with_confidence,
+    summarize_bilateral_frame_metrics
+)
+
 from src.vision.squat_repetition_analysis import (
     BOTTOM_ANGLE_MAX,
     MAX_ACTIVE_FRAME_GAP_SECONDS,
@@ -77,6 +86,19 @@ def validate_positive_integer(
 
     if value < 1:
         raise ValueError(f"{field_name} must be at least 1")
+
+    return value
+
+
+def validate_nonnegative_integer(
+    value,
+    field_name
+):
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(f"{field_name} must be an integer")
+
+    if value < 0:
+        raise ValueError(f"{field_name} cannot be negative")
 
     return value
 
@@ -149,7 +171,9 @@ def validate_bgr_frame(
     frame
 ):
     if not isinstance(frame, np.ndarray):
-        raise VideoDecodeError("Decoded video frame must be a NumPy array")
+        raise VideoDecodeError(
+            "Decoded video frame must be a NumPy array"
+        )
 
     if frame.ndim != 3:
         raise VideoDecodeError(
@@ -163,11 +187,14 @@ def validate_bgr_frame(
             "Decoded video frame must contain exactly three BGR channels"
         )
 
-    if frame.shape[
-        0
-    ] < 1 or frame.shape[
-        1
-    ] < 1:
+    if (
+        frame.shape[
+            0
+        ] < 1
+        or frame.shape[
+            1
+        ] < 1
+    ):
         raise VideoDecodeError(
             "Decoded video frame must have non-zero dimensions"
         )
@@ -306,7 +333,9 @@ def build_frame_timestamp(
     )
 
     if fps <= 0:
-        raise ValueError("fps must be greater than 0")
+        raise ValueError(
+            "fps must be greater than 0"
+        )
 
     raw_timestamp_ms = int(
         round(
@@ -414,6 +443,160 @@ def build_angle_observation_from_detection(
     }
 
 
+def build_movement_metric_from_detection(
+    detection,
+    minimum_visibility=MIN_REQUIRED_VISIBILITY
+):
+    if not isinstance(detection, dict):
+        raise ValueError(
+            "Pose adapter detection must be a dictionary"
+        )
+
+    status = detection.get(
+        "status"
+    )
+
+    if status == DETECTION_STATUS_NO_POSE:
+        return analyze_bilateral_squat_frame(
+            {},
+            minimum_visibility=minimum_visibility
+        )
+
+    if status != DETECTION_STATUS_POSE_DETECTED:
+        raise ValueError(
+            f"Unsupported pose detection status: {status}"
+        )
+
+    pose_landmarks = detection.get(
+        "pose_landmarks"
+    )
+
+    if not isinstance(pose_landmarks, dict):
+        raise ValueError(
+            "Detected pose requires pose_landmarks dictionary"
+        )
+
+    return analyze_bilateral_squat_frame(
+        pose_landmarks,
+        minimum_visibility=minimum_visibility
+    )
+
+
+def build_view_suitability_summary(
+    movement_metrics_summary
+):
+    if not isinstance(
+        movement_metrics_summary,
+        dict
+    ):
+        raise ValueError(
+            "movement_metrics_summary must be a dictionary"
+        )
+
+    frame_count = validate_nonnegative_integer(
+        movement_metrics_summary.get(
+            "frame_count"
+        ),
+        "frame_count"
+    )
+
+    bilateral_count = validate_nonnegative_integer(
+        movement_metrics_summary.get(
+            "bilateral_observable_frame_count"
+        ),
+        "bilateral_observable_frame_count"
+    )
+
+    single_side_count = validate_nonnegative_integer(
+        movement_metrics_summary.get(
+            "single_side_observable_frame_count"
+        ),
+        "single_side_observable_frame_count"
+    )
+
+    insufficient_count = validate_nonnegative_integer(
+        movement_metrics_summary.get(
+            "insufficient_landmark_frame_count"
+        ),
+        "insufficient_landmark_frame_count"
+    )
+
+    if (
+        bilateral_count
+        + single_side_count
+        + insufficient_count
+        != frame_count
+    ):
+        raise ValueError(
+            "Movement frame counts must equal frame_count"
+        )
+
+    if frame_count == 0:
+        return {
+            "classification": VIEW_INSUFFICIENT,
+            "observable_frame_count": 0,
+            "observable_frame_ratio": 0.0,
+            "bilateral_frame_ratio": 0.0,
+            "single_side_frame_ratio": 0.0,
+            "insufficient_frame_ratio": 0.0
+        }
+
+    observable_count = (
+        bilateral_count
+        + single_side_count
+    )
+
+    observable_ratio = (
+        observable_count
+        / frame_count
+    )
+
+    bilateral_ratio = (
+        bilateral_count
+        / frame_count
+    )
+
+    single_side_ratio = (
+        single_side_count
+        / frame_count
+    )
+
+    insufficient_ratio = (
+        insufficient_count
+        / frame_count
+    )
+
+    if bilateral_ratio >= 0.50:
+        classification = VIEW_BILATERAL_OBSERVABLE
+
+    elif observable_ratio >= 0.50:
+        classification = VIEW_SINGLE_SIDE_OBSERVABLE
+
+    else:
+        classification = VIEW_INSUFFICIENT
+
+    return {
+        "classification": classification,
+        "observable_frame_count": observable_count,
+        "observable_frame_ratio": round(
+            observable_ratio,
+            4
+        ),
+        "bilateral_frame_ratio": round(
+            bilateral_ratio,
+            4
+        ),
+        "single_side_frame_ratio": round(
+            single_side_ratio,
+            4
+        ),
+        "insufficient_frame_ratio": round(
+            insufficient_ratio,
+            4
+        )
+    }
+
+
 def create_pose_adapter(
     pose_adapter_factory,
     model_path
@@ -517,6 +700,7 @@ def analyze_squat_video(
         )
 
         angle_observations = []
+        movement_frame_metrics = []
 
         decoded_frame_count = 0
         sampled_frame_count = 0
@@ -530,7 +714,8 @@ def analyze_squat_video(
         while True:
             if (
                 max_analyzed_frames is not None
-                and sampled_frame_count >= max_analyzed_frames
+                and sampled_frame_count
+                >= max_analyzed_frames
             ):
                 break
 
@@ -583,8 +768,17 @@ def analyze_squat_video(
                 minimum_visibility=minimum_visibility
             )
 
+            movement_metric = build_movement_metric_from_detection(
+                detection,
+                minimum_visibility=minimum_visibility
+            )
+
             angle_observations.append(
                 observation
+            )
+
+            movement_frame_metrics.append(
+                movement_metric
             )
 
             sampled_frame_count += 1
@@ -632,8 +826,20 @@ def analyze_squat_video(
             max_active_frame_gap_seconds=max_active_frame_gap_seconds
         )
 
-        result = dict(
+        enriched_sequence_result = enrich_repetitions_with_confidence(
             sequence_result
+        )
+
+        movement_metrics_summary = summarize_bilateral_frame_metrics(
+            movement_frame_metrics
+        )
+
+        view_suitability_summary = build_view_suitability_summary(
+            movement_metrics_summary
+        )
+
+        result = dict(
+            enriched_sequence_result
         )
 
         result[
@@ -675,6 +881,14 @@ def analyze_squat_video(
             "no_pose_frame_count": no_pose_frame_count,
             "insufficient_landmark_frame_count": insufficient_landmark_frame_count
         }
+
+        result[
+            "movement_metrics_summary"
+        ] = movement_metrics_summary
+
+        result[
+            "view_suitability_summary"
+        ] = view_suitability_summary
 
         if include_frame_observations:
             result[
